@@ -1,0 +1,9 @@
+{
+  "name": "@zenovay/example-html",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "node validate.mjs",
+    "typecheck": "node validate.mjs"
+  }
+}

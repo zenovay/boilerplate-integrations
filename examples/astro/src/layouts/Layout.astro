@@ -1,0 +1,21 @@
+---
+const trackingCode = import.meta.env.PUBLIC_ZENOVAY_TRACKING_CODE
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <script
+      defer
+      data-id={trackingCode}
+      data-cookieless="true"
+      src="https://api.zenovay.com/z.js"
+      is:inline
+    ></script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

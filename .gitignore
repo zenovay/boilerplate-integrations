@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+.astro/
+coverage/
+*.log
+*.tsbuildinfo
+.DS_Store
+.env
+.env.*
+!.env.example
+zenovay-boilerplate-outreach/

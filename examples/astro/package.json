@@ -1,0 +1,15 @@
+{
+  "name": "@zenovay/example-astro",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "PUBLIC_ZENOVAY_TRACKING_CODE=ZV_BUILD_TEST astro build",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.9",
+    "astro": "^7.1.1",
+    "typescript": "^5.9.3"
+  }
+}

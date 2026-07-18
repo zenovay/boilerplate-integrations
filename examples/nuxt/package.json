@@ -1,0 +1,19 @@
+{
+  "name": "@zenovay/example-nuxt",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "NUXT_PUBLIC_ZENOVAY_TRACKING_CODE=ZV_BUILD_TEST nuxt build",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@zenovay/integration-core": "workspace:*",
+    "nuxt": "^4.4.8",
+    "vue": "^3.5.40"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.7"
+  }
+}

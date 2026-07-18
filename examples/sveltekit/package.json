@@ -1,0 +1,21 @@
+{
+  "name": "@zenovay/example-sveltekit",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "PUBLIC_ZENOVAY_TRACKING_CODE=ZV_BUILD_TEST vite build",
+    "typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@sveltejs/adapter-auto": "^7.0.1",
+    "@sveltejs/kit": "^2.70.0",
+    "@zenovay/integration-core": "workspace:*",
+    "svelte": "^5.56.6",
+    "vite": "^8.1.5"
+  },
+  "devDependencies": {
+    "svelte-check": "^4.3.4",
+    "typescript": "^5.9.3"
+  }
+}

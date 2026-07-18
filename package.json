@@ -1,0 +1,39 @@
+{
+  "name": "zenovay-boilerplate-integrations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Official Zenovay integrations for frameworks, boilerplates, starter kits, and SaaS kits.",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "catalog:generate": "tsx scripts/generate-readme.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "links": "tsx scripts/validate-links.ts",
+    "secrets": "tsx scripts/scan-secrets.ts",
+    "test": "vitest run",
+    "typecheck": "pnpm -r --if-present typecheck && tsc --noEmit -p tsconfig.json",
+    "validate": "tsx scripts/validate-catalog.ts && tsx scripts/validate-integrations.ts && pnpm links && pnpm secrets",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm validate && pnpm build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^24.10.1",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "eslint": "^9.39.1",
+    "jsdom": "^27.2.0",
+    "prettier": "^3.7.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.1",
+    "vitest": "^4.0.15"
+  }
+}

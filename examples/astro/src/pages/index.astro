@@ -1,0 +1,15 @@
+---
+import Layout from '../layouts/Layout.astro'
+---
+
+<Layout>
+  <main>
+    <h1>Astro example</h1>
+    <button id="signup">Complete signup</button>
+  </main>
+  <script>
+    document.querySelector('#signup')?.addEventListener('click', () => {
+      window.zenovay?.('goal', 'signup_completed')
+    })
+  </script>
+</Layout>

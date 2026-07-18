@@ -1,0 +1,22 @@
+{
+  "name": "@zenovay/example-react-vite",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@zenovay/integration-core": "workspace:*",
+    "@vitejs/plugin-react": "^6.0.3",
+    "vite": "^8.1.5",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}
