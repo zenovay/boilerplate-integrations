@@ -93,6 +93,8 @@ and tested.
 | Open SaaS                     | `community`       | [Integration and upstream proposal](boilerplates/open-saas/)                    |
 | Next.js SaaS Starter          | `community`       | [Integration and upstream proposal](boilerplates/nextjs-saas-starter/)          |
 | ixartz SaaS Boilerplate       | `community`       | [Integration and upstream proposal](boilerplates/ixartz-saas-boilerplate/)      |
+| CMSaasStarter                 | `verified`        | [Tested upstream patch](boilerplates/cmsaasstarter/)                            |
+| Paddle Next.js Starter Kit    | `verified`        | [Tested upstream patch](boilerplates/paddle-nextjs-starter-kit/)                |
 | Achromatic                    | `blocked-private` | [Public-source assessment](boilerplates/achromatic/)                            |
 
 `community` means that this repository maintains the proposal; it does not mean

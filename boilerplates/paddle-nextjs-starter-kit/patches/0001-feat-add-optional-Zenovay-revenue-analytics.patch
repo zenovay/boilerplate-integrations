@@ -1,0 +1,223 @@
+From 384f25a701a9aeac1b5817a85512c7a423afce23 Mon Sep 17 00:00:00 2001
+From: Zenovay <noreply@zenovay.com>
+Date: Sat, 18 Jul 2026 22:38:45 +0200
+Subject: [PATCH] feat: add optional Zenovay revenue analytics
+
+---
+ .env.local.example                            |  3 ++
+ README.md                                     |  1 +
+ package.json                                  |  1 +
+ pnpm-lock.yaml                                | 13 +++++--
+ src/app/layout.tsx                            |  2 ++
+ src/components/analytics/zenovay-provider.tsx | 36 +++++++++++++++++++
+ src/components/checkout/checkout-contents.tsx | 30 +++++++++++++---
+ 7 files changed, 80 insertions(+), 6 deletions(-)
+ create mode 100644 src/components/analytics/zenovay-provider.tsx
+
+diff --git a/.env.local.example b/.env.local.example
+index 8563d7f..6b5e1f6 100644
+--- a/.env.local.example
++++ b/.env.local.example
+@@ -14,3 +14,6 @@ PADDLE_NOTIFICATION_WEBHOOK_SECRET=
+ 
+ ## Public
+ NEXT_PUBLIC_PADDLE_CLIENT_TOKEN=
++
++# Optional cookieless Zenovay analytics
++NEXT_PUBLIC_ZENOVAY_TRACKING_CODE=
+diff --git a/README.md b/README.md
+index 84bca05..c22ae6e 100644
+--- a/README.md
++++ b/README.md
+@@ -69,6 +69,7 @@ Then, enter Paddle environment variables:
+ | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`    | A [client-side key](https://developer.paddle.com/api-reference/about/authentication?utm_source=dx&utm_medium=paddle-nextjs-starter-kit), used for interacting with Paddle in the frontend. For example, getting localized prices for pricing pages and opening a checkout. | Go to [**Paddle > Developer tools > Authentication**](https://sandbox-vendors.paddle.com/authentication-v2) and create a new client-side token.                                                                                                              |
+ | `PADDLE_NOTIFICATION_WEBHOOK_SECRET` | A secret key used for verifying that [webhooks](https://developer.paddle.com/webhooks/notification-destinations?utm_source=dx&utm_medium=paddle-nextjs-starter-kit) came from Paddle and haven't been tampered with in transit. Important for security.                    | Go to [**Paddle > Developer tools > Notifications**](https://sandbox-vendors.paddle.com/notifications), create a new notification destination for your Vercel deploy URL + `/api/webhook`, then edit to copy the secret key. See below for more information. |
+ | `NEXT_PUBLIC_PADDLE_ENV`             | Environment for our Paddle account. This should match the kind of Paddle account you signed up for.                                                                                                                                                                        | Enter `sandbox` for sandbox accounts or `production` for live accounts.                                                                                                                                                                                      |
++| `NEXT_PUBLIC_ZENOVAY_TRACKING_CODE`  | Optional public tracking code for cookieless Zenovay analytics, including checkout revenue attribution.                                                                                                                                                                    | Create a website in Zenovay and copy its `ZV_...` tracking code.                                                                                                                                                                                             |
+ 
+ Use `https://<PROJECTNAME>.vercel.app/api/webhook` as the endpoint URL for your notification destination, where `<PROJECTNAME>` is the name of your project in Vercel. For example, `https://paddle-billing.vercel.app/api/webhook`.
+ 
+diff --git a/package.json b/package.json
+index f83b3df..8e7d352 100644
+--- a/package.json
++++ b/package.json
+@@ -37,6 +37,7 @@
+     "@supabase/ssr": "^0.7.0",
+     "@supabase/supabase-js": "^2.57.4",
+     "@tanstack/react-table": "^8.21.3",
++    "@zenovay/tracker": "0.1.0",
+     "class-variance-authority": "^0.7.1",
+     "clsx": "^2.1.1",
+     "dayjs": "^1.11.18",
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 987d16b..984345f 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -54,6 +54,9 @@ importers:
+       '@tanstack/react-table':
+         specifier: ^8.21.3
+         version: 8.21.3(react-dom@19.1.5(react@19.1.5))(react@19.1.5)
++      '@zenovay/tracker':
++        specifier: 0.1.0
++        version: 0.1.0
+       class-variance-authority:
+         specifier: ^0.7.1
+         version: 0.7.1
+@@ -1171,6 +1174,10 @@ packages:
+   '@vercel/git-hooks@1.0.0':
+     resolution: {integrity: sha512-OxDFAAdyiJ/H0b8zR9rFCu3BIb78LekBXOphOYG3snV4ULhKFX387pBPpqZ9HLiRTejBWBxYEahkw79tuIgdAA==}
+ 
++  '@zenovay/tracker@0.1.0':
++    resolution: {integrity: sha512-7pO8Gpz14uNZzC0R+V4qy6msCE0uxGxym0NxX+yV4OKC6sezGbDNgMZXeEm2Le2ASxgB1DGrdY8m2sJ5/nL04Q==}
++    engines: {node: '>=18'}
++
+   acorn-jsx@5.3.2:
+     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
+     peerDependencies:
+@@ -3587,6 +3594,8 @@ snapshots:
+ 
+   '@vercel/git-hooks@1.0.0': {}
+ 
++  '@zenovay/tracker@0.1.0': {}
++
+   acorn-jsx@5.3.2(acorn@8.14.1):
+     dependencies:
+       acorn: 8.14.1
+@@ -4008,7 +4017,7 @@ snapshots:
+     transitivePeerDependencies:
+       - supports-color
+ 
+-  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.43.0(eslint@9.36.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.36.0(jiti@2.5.1)))(eslint@9.36.0(jiti@2.5.1)):
++  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.43.0(eslint@9.36.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.36.0(jiti@2.5.1)):
+     dependencies:
+       debug: 3.2.7
+     optionalDependencies:
+@@ -4030,7 +4039,7 @@ snapshots:
+       doctrine: 2.1.0
+       eslint: 9.36.0(jiti@2.5.1)
+       eslint-import-resolver-node: 0.3.9
+-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.43.0(eslint@9.36.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.36.0(jiti@2.5.1)))(eslint@9.36.0(jiti@2.5.1))
++      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.43.0(eslint@9.36.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1)(eslint@9.36.0(jiti@2.5.1))
+       hasown: 2.0.2
+       is-core-module: 2.16.1
+       is-glob: 4.0.3
+diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+index e4460cb..4e50f6d 100644
+--- a/src/app/layout.tsx
++++ b/src/app/layout.tsx
+@@ -4,6 +4,7 @@ import '../styles/layout.css';
+ import { ReactNode } from 'react';
+ import type { Metadata } from 'next';
+ import { Toaster } from '@/components/ui/toaster';
++import { ZenovayProvider } from '@/components/analytics/zenovay-provider';
+ 
+ const inter = Inter({ subsets: ['latin'] });
+ 
+@@ -22,6 +23,7 @@ export default function RootLayout({
+   return (
+     <html lang="en" className={'min-h-full dark'}>
+       <body className={inter.className}>
++        <ZenovayProvider />
+         {children}
+         <Toaster />
+       </body>
+diff --git a/src/components/analytics/zenovay-provider.tsx b/src/components/analytics/zenovay-provider.tsx
+new file mode 100644
+index 0000000..c8a0220
+--- /dev/null
++++ b/src/components/analytics/zenovay-provider.tsx
+@@ -0,0 +1,36 @@
++'use client';
++
++import { init, page } from '@zenovay/tracker';
++import { usePathname } from 'next/navigation';
++import { useEffect, useRef } from 'react';
++
++export function ZenovayProvider() {
++  const pathname = usePathname();
++  const initialized = useRef(false);
++  const previousPath = useRef<string | null>(null);
++
++  useEffect(() => {
++    const trackingCode = process.env.NEXT_PUBLIC_ZENOVAY_TRACKING_CODE;
++
++    if (!trackingCode) return;
++
++    init(trackingCode, { cookieless: true });
++    initialized.current = true;
++  }, []);
++
++  useEffect(() => {
++    if (!initialized.current) return;
++
++    if (previousPath.current === null) {
++      previousPath.current = pathname;
++      return;
++    }
++
++    if (previousPath.current !== pathname) {
++      previousPath.current = pathname;
++      page();
++    }
++  }, [pathname]);
++
++  return null;
++}
+diff --git a/src/components/checkout/checkout-contents.tsx b/src/components/checkout/checkout-contents.tsx
+index a4cc1a7..becc16f 100644
+--- a/src/components/checkout/checkout-contents.tsx
++++ b/src/components/checkout/checkout-contents.tsx
+@@ -4,9 +4,11 @@ import { PriceSection } from '@/components/checkout/price-section';
+ import { CheckoutFormGradients } from '@/components/gradients/checkout-form-gradients';
+ import { type Environments, initializePaddle, type Paddle } from '@paddle/paddle-js';
+ import type { CheckoutEventsData } from '@paddle/paddle-js/types/checkout/events';
++import { identify, revenue } from '@zenovay/tracker';
+ import throttle from 'lodash.throttle';
+ import { useParams } from 'next/navigation';
+-import { useCallback, useEffect, useState } from 'react';
++import { useCallback, useEffect, useRef, useState } from 'react';
++import { convertAmountFromLowestUnit } from '@/utils/paddle/parse-money';
+ 
+ interface PathParams {
+   priceId: string;
+@@ -22,9 +24,29 @@ export function CheckoutContents({ userEmail }: Props) {
+   const [quantity, setQuantity] = useState<number>(1);
+   const [paddle, setPaddle] = useState<Paddle | null>(null);
+   const [checkoutData, setCheckoutData] = useState<CheckoutEventsData | null>(null);
++  const recordedTransactions = useRef(new Set<string>());
+ 
+-  const handleCheckoutEvents = (event: CheckoutEventsData) => {
+-    setCheckoutData(event);
++  const handleCheckoutEvents = (eventName: string, eventData: CheckoutEventsData) => {
++    setCheckoutData(eventData);
++
++    if (eventName !== 'checkout.completed' || recordedTransactions.current.has(eventData.transaction_id)) return;
++
++    recordedTransactions.current.add(eventData.transaction_id);
++
++    const visitorId = eventData.customer.id ?? eventData.customer.email;
++    if (visitorId) {
++      identify(visitorId, { email: eventData.customer.email });
++    }
++
++    revenue(
++      convertAmountFromLowestUnit(String(eventData.totals.total), eventData.currency_code),
++      eventData.currency_code,
++      {
++        order_id: eventData.transaction_id,
++        product_id: eventData.items[0]?.product.id,
++        paddle_checkout_id: eventData.id,
++      },
++    );
+   };
+ 
+   const updateItems = useCallback(
+@@ -41,7 +63,7 @@ export function CheckoutContents({ userEmail }: Props) {
+         environment: process.env.NEXT_PUBLIC_PADDLE_ENV as Environments,
+         eventCallback: (event) => {
+           if (event.data && event.name) {
+-            handleCheckoutEvents(event.data);
++            handleCheckoutEvents(event.name, event.data);
+           }
+         },
+         checkout: {

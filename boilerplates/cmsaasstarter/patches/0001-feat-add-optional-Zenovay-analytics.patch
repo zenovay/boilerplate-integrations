@@ -1,0 +1,172 @@
+From 0c117c2a649839709724d72b2a3af030b7f3f25c Mon Sep 17 00:00:00 2001
+From: Zenovay <noreply@zenovay.com>
+Date: Sat, 18 Jul 2026 22:41:59 +0200
+Subject: [PATCH] feat: add optional Zenovay analytics
+
+---
+ .env.example                              |  5 ++++-
+ analytics_docs.md                         | 11 +++++++++++
+ package-lock.json                         | 11 ++++++++++-
+ package.json                              |  1 +
+ src/routes/(admin)/account/+layout.svelte | 17 +++++++++++------
+ src/routes/+layout.svelte                 | 17 +++++++++++++++++
+ 6 files changed, 54 insertions(+), 8 deletions(-)
+
+diff --git a/.env.example b/.env.example
+index 04e9224..a574fed 100644
+--- a/.env.example
++++ b/.env.example
+@@ -1,6 +1,9 @@
+ # Supabase settings
+ PUBLIC_SUPABASE_URL='https://REPLACE_ME.supabase.co'
+ PUBLIC_SUPABASE_ANON_KEY='REPLACE_ME'
++
++# Optional cookieless Zenovay analytics
++PUBLIC_ZENOVAY_TRACKING_CODE=''
+ PRIVATE_SUPABASE_SERVICE_ROLE='REPLACE_ME'
+ 
+ # Stripe settings
+@@ -13,4 +16,4 @@ PRIVATE_STRIPE_API_KEY='REPLACE_ME'
+ # Email address messages will be sent from
+ # PRIVATE_FROM_ADMIN_EMAIL='no_reply@example.com'
+ # Resend API key
+-# PRIVATE_RESEND_API_KEY='your_resend_api_key'
+\ No newline at end of file
++# PRIVATE_RESEND_API_KEY='your_resend_api_key'
+diff --git a/analytics_docs.md b/analytics_docs.md
+index 24edf16..1b2c474 100644
+--- a/analytics_docs.md
++++ b/analytics_docs.md
+@@ -19,3 +19,14 @@ Since each analytics platform has different setup instructions, we've created a
+ Follow the [Google Analytics Guide](https://support.google.com/analytics/answer/9304153?hl=en) to add Google Analytics to your project.
+ 
+ The ideal place to add Google Analytics is in `src/routes/+layout.svelte`.
++
++### Zenovay
++
++Set `PUBLIC_ZENOVAY_TRACKING_CODE` to the `ZV_...` code from your Zenovay
++website settings. The root layout initializes cookieless tracking and records
++SvelteKit client-side navigation. Authenticated account pages identify the
++Supabase user so acquisition can be connected to activation.
++
++Connect the project's Stripe account in Zenovay for authoritative subscription
++revenue attribution. Browser-side revenue events are deliberately not emitted
++from the server redirect that creates the Stripe Checkout session.
+diff --git a/package-lock.json b/package-lock.json
+index 266426e..2a91efe 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -13,6 +13,7 @@
+         "@supabase/auth-ui-svelte": "^0.2.9",
+         "@supabase/ssr": "^0.5.2",
+         "@supabase/supabase-js": "^2.45.2",
++        "@zenovay/tracker": "0.1.0",
+         "handlebars": "^4.7.8",
+         "resend": "^3.5.0",
+         "stripe": "^13.3.0"
+@@ -2201,6 +2202,15 @@
+       "dev": true,
+       "license": "BSD-2-Clause"
+     },
++    "node_modules/@zenovay/tracker": {
++      "version": "0.1.0",
++      "resolved": "https://registry.npmjs.org/@zenovay/tracker/-/tracker-0.1.0.tgz",
++      "integrity": "sha512-7pO8Gpz14uNZzC0R+V4qy6msCE0uxGxym0NxX+yV4OKC6sezGbDNgMZXeEm2Le2ASxgB1DGrdY8m2sJ5/nL04Q==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=18"
++      }
++    },
+     "node_modules/abbrev": {
+       "version": "2.0.0",
+       "resolved": "https://registry.npmjs.org/abbrev/-/abbrev-2.0.0.tgz",
+@@ -7024,7 +7034,6 @@
+       "integrity": "sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==",
+       "dev": true,
+       "license": "ISC",
+-      "peer": true,
+       "bin": {
+         "yaml": "bin.mjs"
+       },
+diff --git a/package.json b/package.json
+index 7a73858..0477384 100644
+--- a/package.json
++++ b/package.json
+@@ -52,6 +52,7 @@
+     "@supabase/auth-ui-svelte": "^0.2.9",
+     "@supabase/ssr": "^0.5.2",
+     "@supabase/supabase-js": "^2.45.2",
++    "@zenovay/tracker": "0.1.0",
+     "handlebars": "^4.7.8",
+     "resend": "^3.5.0",
+     "stripe": "^13.3.0"
+diff --git a/src/routes/(admin)/account/+layout.svelte b/src/routes/(admin)/account/+layout.svelte
+index 5ff9818..8d221e0 100644
+--- a/src/routes/(admin)/account/+layout.svelte
++++ b/src/routes/(admin)/account/+layout.svelte
+@@ -1,5 +1,6 @@
+ <script lang="ts">
+   import { invalidate } from "$app/navigation"
++  import { identify } from "@zenovay/tracker"
+   import { onMount } from "svelte"
+ 
+   let { data, children } = $props()
+@@ -8,13 +9,17 @@
+   let session = $derived(data.session)
+ 
+   onMount(() => {
+-    const { data } = supabase.auth.onAuthStateChange((event, _session) => {
+-      if (_session?.expires_at !== session?.expires_at) {
+-        invalidate("supabase:auth")
+-      }
+-    })
++    identify(data.user.id, { email: data.user.email })
+ 
+-    return () => data.subscription.unsubscribe()
++    const { data: authListener } = supabase.auth.onAuthStateChange(
++      (event, _session) => {
++        if (_session?.expires_at !== session?.expires_at) {
++          invalidate("supabase:auth")
++        }
++      },
++    )
++
++    return () => authListener.subscription.unsubscribe()
+   })
+ </script>
+ 
+diff --git a/src/routes/+layout.svelte b/src/routes/+layout.svelte
+index 45621e4..cea3e80 100644
+--- a/src/routes/+layout.svelte
++++ b/src/routes/+layout.svelte
+@@ -1,6 +1,10 @@
+ <script lang="ts">
+   import "../app.css"
++  import { browser } from "$app/environment"
++  import { afterNavigate } from "$app/navigation"
+   import { navigating } from "$app/stores"
++  import { env } from "$env/dynamic/public"
++  import { init, page } from "@zenovay/tracker"
+   import { expoOut } from "svelte/easing"
+   import { slide } from "svelte/transition"
+   interface Props {
+@@ -8,6 +12,19 @@
+   }
+ 
+   let { children }: Props = $props()
++
++  let zenovayReady = false
++
++  if (browser && env.PUBLIC_ZENOVAY_TRACKING_CODE) {
++    init(env.PUBLIC_ZENOVAY_TRACKING_CODE, { cookieless: true })
++    zenovayReady = true
++  }
++
++  afterNavigate(({ from }) => {
++    if (zenovayReady && from) {
++      page()
++    }
++  })
+ </script>
+ 
+ {#if $navigating}
