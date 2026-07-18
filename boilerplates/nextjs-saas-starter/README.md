@@ -5,7 +5,7 @@
 - Status: `verified`
 - Upstream commit: `6e33e58b1e553a41fe22e6b941a7229a002de361`
 - Prepared branch: `zenovay/cookieless-analytics`
-- Prepared commit: `846f6dfc9590ba9ca76b404b3fec96dc34432651`
+- Prepared commit: `d85566c2cd92aa9bf776f484bf1ad9ec72b77beb`
 - Last verified: 2026-07-18
 - Maintainer: Zenovay
 - Upstream: https://github.com/nextjs/saas-starter
@@ -20,8 +20,8 @@ git apply 0001-feat-add-optional-Zenovay-analytics.patch
 
 The patch is in [`patches/`](patches/). It installs
 `@zenovay/tracker@0.1.0`, adds the client provider, mounts it once in the root
-layout, documents event helpers, and adds
-`NEXT_PUBLIC_ZENOVAY_TRACKING_CODE` to the environment example.
+layout, and documents event helpers. Set
+`NEXT_PUBLIC_ZENOVAY_TRACKING_CODE` in the existing `.env` file.
 
 ## Page views and SPA navigation
 

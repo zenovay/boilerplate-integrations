@@ -1,32 +1,17 @@
-From 846f6dfc9590ba9ca76b404b3fec96dc34432651 Mon Sep 17 00:00:00 2001
+From d85566c2cd92aa9bf776f484bf1ad9ec72b77beb Mon Sep 17 00:00:00 2001
 From: Zenovay <noreply@zenovay.com>
 Date: Sat, 18 Jul 2026 23:09:43 +0200
 Subject: [PATCH] feat: add optional Zenovay analytics
 
 ---
- .env.example             |  5 ++++-
  README.md                | 19 ++++++++++++++++++
  app/layout.tsx           |  5 +++++
  app/zenovay-provider.tsx | 42 ++++++++++++++++++++++++++++++++++++++++
  package.json             |  1 +
  pnpm-lock.yaml           |  9 +++++++++
- 6 files changed, 80 insertions(+), 1 deletion(-)
+ 5 files changed, 76 insertions(+)
  create mode 100644 app/zenovay-provider.tsx
 
-diff --git a/.env.example b/.env.example
-index aa45b7c..4b28f64 100644
---- a/.env.example
-+++ b/.env.example
-@@ -4,4 +4,7 @@ POSTGRES_URL=postgresql://***
- STRIPE_SECRET_KEY=sk_test_***
- STRIPE_WEBHOOK_SECRET=whsec_***
- BASE_URL=http://localhost:3000
--AUTH_SECRET=***
-\ No newline at end of file
-+AUTH_SECRET=***
-+
-+# Optional cookieless Zenovay analytics
-+NEXT_PUBLIC_ZENOVAY_TRACKING_CODE=
 diff --git a/README.md b/README.md
 index 093d91d..4ea88fe 100644
 --- a/README.md
