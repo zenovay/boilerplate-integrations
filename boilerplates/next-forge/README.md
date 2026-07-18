@@ -2,17 +2,26 @@
 
 ## Status
 
-- Status: `community`
+- Status: `verified`
 - Upstream commit: `f189de79ceef7c1ef69f61f12e272f99b4cdb699`
+- Prepared branch: `zenovay/analytics-provider`
+- Prepared commit: `578e303f3c0ce69f015a576a3ef7ff5f3e329ad6`
 - Last verified: 2026-07-18
 - Maintainer: Zenovay
 - Upstream: https://github.com/vercel/next-forge
 
-This adapter is upstream-ready but is not bundled or endorsed by next-forge.
+This is a tested community patch. It is not bundled or endorsed by next-forge.
 
 ## Install
 
-Add `@zenovay/tracker@0.1.0` to `packages/analytics/package.json`. Extend
+Apply the patch from the upstream repository root:
+
+```bash
+git apply 0001-feat-analytics-add-optional-Zenovay-provider.patch
+```
+
+The patch is in [`patches/`](patches/). It adds
+`@zenovay/tracker@0.1.0` to `packages/analytics/package.json`. It extends
 `packages/analytics/keys.ts` with an optional client key named
 `NEXT_PUBLIC_ZENOVAY_TRACKING_CODE`. In
 `packages/analytics/instrumentation-client.ts`, initialize Zenovay alongside
@@ -62,9 +71,19 @@ Next.js app environments that load analytics. Update CSP if customized.
 
 ## Verification
 
-Run `pnpm --filter @repo/analytics typecheck` and the next-forge monorepo build.
-In each app, confirm one `z.js` tag, one initial event, and one event per SPA
-navigation. Use an isolated Zenovay site for Live View.
+The patch was checked against the recorded upstream commit:
+
+```bash
+bun install
+bun run --filter @repo/analytics typecheck
+bunx ultracite check packages/analytics docs/content/docs/packages/analytics/web.mdx
+```
+
+All three commands pass. The full monorepo build reaches the unrelated CMS
+package and then requires a private `BASEHUB_TOKEN`; the analytics package
+itself type-checks and formats cleanly. In each app, confirm one `z.js` tag,
+one initial event, and one event per SPA navigation with an isolated Zenovay
+site.
 
 ## Troubleshooting
 

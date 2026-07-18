@@ -2,18 +2,26 @@
 
 ## Status
 
-- Status: `community`
+- Status: `verified`
 - Upstream commit: `6e33e58b1e553a41fe22e6b941a7229a002de361`
+- Prepared branch: `zenovay/cookieless-analytics`
+- Prepared commit: `846f6dfc9590ba9ca76b404b3fec96dc34432651`
 - Last verified: 2026-07-18
 - Maintainer: Zenovay
 - Upstream: https://github.com/nextjs/saas-starter
 
 ## Install
 
-Add `@zenovay/tracker@0.1.0`, copy the client provider from
-[`../../examples/nextjs-saas/app/zenovay-provider.tsx`](../../examples/nextjs-saas/app/zenovay-provider.tsx),
-and render it once inside `app/layout.tsx`. Set
-`NEXT_PUBLIC_ZENOVAY_TRACKING_CODE`.
+Apply the patch from the upstream repository root:
+
+```bash
+git apply 0001-feat-add-optional-Zenovay-analytics.patch
+```
+
+The patch is in [`patches/`](patches/). It installs
+`@zenovay/tracker@0.1.0`, adds the client provider, mounts it once in the root
+layout, documents event helpers, and adds
+`NEXT_PUBLIC_ZENOVAY_TRACKING_CODE` to the environment example.
 
 ## Page views and SPA navigation
 
@@ -39,8 +47,18 @@ the production deployment. Add CSP values if the starter gains a CSP.
 
 ## Verification
 
-Run `next build`, TypeScript, signup/checkout tests, and inspect the browser for
-one tracker script and no duplicate navigation events.
+The patch was checked against the recorded upstream commit:
+
+```bash
+pnpm install
+pnpm exec tsc --noEmit
+```
+
+TypeScript passes. `pnpm build` also compiles the application and passes its
+TypeScript phase, but the starter's `/pricing` prerender then calls Stripe and
+requires a real test key. No production or personal Stripe key was used for
+this public integration check. With a configured Stripe test environment,
+inspect the browser for one tracker script and no duplicate navigation events.
 
 ## Troubleshooting
 

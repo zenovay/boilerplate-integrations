@@ -1,0 +1,179 @@
+From 846f6dfc9590ba9ca76b404b3fec96dc34432651 Mon Sep 17 00:00:00 2001
+From: Zenovay <noreply@zenovay.com>
+Date: Sat, 18 Jul 2026 23:09:43 +0200
+Subject: [PATCH] feat: add optional Zenovay analytics
+
+---
+ .env.example             |  5 ++++-
+ README.md                | 19 ++++++++++++++++++
+ app/layout.tsx           |  5 +++++
+ app/zenovay-provider.tsx | 42 ++++++++++++++++++++++++++++++++++++++++
+ package.json             |  1 +
+ pnpm-lock.yaml           |  9 +++++++++
+ 6 files changed, 80 insertions(+), 1 deletion(-)
+ create mode 100644 app/zenovay-provider.tsx
+
+diff --git a/.env.example b/.env.example
+index aa45b7c..4b28f64 100644
+--- a/.env.example
++++ b/.env.example
+@@ -4,4 +4,7 @@ POSTGRES_URL=postgresql://***
+ STRIPE_SECRET_KEY=sk_test_***
+ STRIPE_WEBHOOK_SECRET=whsec_***
+ BASE_URL=http://localhost:3000
+-AUTH_SECRET=***
+\ No newline at end of file
++AUTH_SECRET=***
++
++# Optional cookieless Zenovay analytics
++NEXT_PUBLIC_ZENOVAY_TRACKING_CODE=
+diff --git a/README.md b/README.md
+index 093d91d..4ea88fe 100644
+--- a/README.md
++++ b/README.md
+@@ -68,6 +68,25 @@ pnpm dev
+ 
+ Open [http://localhost:3000](http://localhost:3000) in your browser to see the app in action.
+ 
++### Optional Zenovay analytics
++
++Set `NEXT_PUBLIC_ZENOVAY_TRACKING_CODE` to enable cookieless Zenovay analytics.
++The provider records the initial page automatically and deduplicates subsequent
++App Router navigation. Use the public tracker helpers for product events:
++
++```ts
++import { goal, identify, revenue, track } from '@zenovay/tracker';
++
++track('checkout_started', { plan: 'pro' });
++goal('signup_completed');
++identify(user.id, { email: user.email });
++revenue(49, 'USD', { order_id: checkoutSession.id });
++```
++
++Connect Stripe in Zenovay for authoritative server-side revenue attribution.
++Local event ingestion remains controlled by the website's Allow Localhost
++setting in Zenovay.
++
+ You can listen for Stripe webhooks locally through their CLI to handle subscription change events:
+ 
+ ```bash
+diff --git a/app/layout.tsx b/app/layout.tsx
+index 9c25967..af764fe 100644
+--- a/app/layout.tsx
++++ b/app/layout.tsx
+@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from 'next';
+ import { Manrope } from 'next/font/google';
+ import { getUser, getTeamForUser } from '@/lib/db/queries';
+ import { SWRConfig } from 'swr';
++import { Suspense } from 'react';
++import { ZenovayProvider } from './zenovay-provider';
+ 
+ export const metadata: Metadata = {
+   title: 'Next.js SaaS Starter',
+@@ -38,6 +40,9 @@ export default function RootLayout({
+         >
+           {children}
+         </SWRConfig>
++        <Suspense fallback={null}>
++          <ZenovayProvider />
++        </Suspense>
+       </body>
+     </html>
+   );
+diff --git a/app/zenovay-provider.tsx b/app/zenovay-provider.tsx
+new file mode 100644
+index 0000000..7b25d9e
+--- /dev/null
++++ b/app/zenovay-provider.tsx
+@@ -0,0 +1,42 @@
++'use client';
++
++import { init, page } from '@zenovay/tracker';
++import { usePathname, useSearchParams } from 'next/navigation';
++import { useEffect, useRef } from 'react';
++
++export function ZenovayProvider() {
++  const pathname = usePathname();
++  const searchParams = useSearchParams();
++  const previousUrl = useRef<string | undefined>(undefined);
++
++  useEffect(() => {
++    const trackingCode = process.env.NEXT_PUBLIC_ZENOVAY_TRACKING_CODE;
++
++    if (!trackingCode) {
++      return;
++    }
++
++    init(trackingCode, { cookieless: true });
++    const query = searchParams.toString();
++    previousUrl.current = `${pathname}${query ? `?${query}` : ''}`;
++  }, []);
++
++  useEffect(() => {
++    const query = searchParams.toString();
++    const currentUrl = `${pathname}${query ? `?${query}` : ''}`;
++
++    if (!previousUrl.current) {
++      previousUrl.current = currentUrl;
++      return;
++    }
++
++    if (previousUrl.current === currentUrl) {
++      return;
++    }
++
++    previousUrl.current = currentUrl;
++    page();
++  }, [pathname, searchParams]);
++
++  return null;
++}
+diff --git a/package.json b/package.json
+index 7db3e40..09e3aa5 100644
+--- a/package.json
++++ b/package.json
+@@ -15,6 +15,7 @@
+     "@types/node": "^22.15.18",
+     "@types/react": "19.1.4",
+     "@types/react-dom": "19.1.5",
++    "@zenovay/tracker": "0.1.0",
+     "autoprefixer": "^10.4.21",
+     "bcryptjs": "^3.0.2",
+     "class-variance-authority": "^0.7.1",
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index 95de5d4..a1eb669 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -20,6 +20,9 @@ importers:
+       '@types/react-dom':
+         specifier: 19.1.5
+         version: 19.1.5(@types/react@19.1.4)
++      '@zenovay/tracker':
++        specifier: 0.1.0
++        version: 0.1.0
+       autoprefixer:
+         specifier: ^10.4.21
+         version: 10.4.21(postcss@8.5.3)
+@@ -1416,6 +1419,10 @@ packages:
+   '@types/react@19.1.4':
+     resolution: {integrity: sha512-EB1yiiYdvySuIITtD5lhW4yPyJ31RkJkkDw794LaQYrxCSaQV/47y5o1FMC4zF9ZyjUjzJMZwbovEnT5yHTW6g==}
+ 
++  '@zenovay/tracker@0.1.0':
++    resolution: {integrity: sha512-7pO8Gpz14uNZzC0R+V4qy6msCE0uxGxym0NxX+yV4OKC6sezGbDNgMZXeEm2Le2ASxgB1DGrdY8m2sJ5/nL04Q==}
++    engines: {node: '>=18'}
++
+   aria-hidden@1.2.4:
+     resolution: {integrity: sha512-y+CcFFwelSXpLZk/7fMB2mUbGtX9lKycf1MWJ7CaTIERyitVlyQx6C+sxcROU2BAJ24OiZyK+8wj2i8AlBoS3A==}
+     engines: {node: '>=10'}
+@@ -3202,6 +3209,8 @@ snapshots:
+     dependencies:
+       csstype: 3.1.3
+ 
++  '@zenovay/tracker@0.1.0': {}
++
+   aria-hidden@1.2.4:
+     dependencies:
+       tslib: 2.8.1
+-- 
+2.50.1 (Apple Git-155)
+

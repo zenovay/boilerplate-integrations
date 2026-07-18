@@ -1,0 +1,171 @@
+From 414514e50e0ca4ffa74c45c06638768a70c9d671 Mon Sep 17 00:00:00 2001
+From: Zenovay <noreply@zenovay.com>
+Date: Sat, 18 Jul 2026 23:15:03 +0200
+Subject: [PATCH] feat(analytics): add Zenovay provider
+
+---
+ .changeset/bright-rivers-track.md        |  5 +++
+ packages/pliny/CHANGELOG.md              |  5 +++
+ packages/pliny/src/analytics/Zenovay.tsx | 48 ++++++++++++++++++++++++
+ packages/pliny/src/analytics/index.tsx   | 21 ++++++++++-
+ packages/pliny/src/config.ts             |  4 ++
+ 5 files changed, 81 insertions(+), 2 deletions(-)
+ create mode 100644 .changeset/bright-rivers-track.md
+ create mode 100644 packages/pliny/src/analytics/Zenovay.tsx
+
+diff --git a/.changeset/bright-rivers-track.md b/.changeset/bright-rivers-track.md
+new file mode 100644
+index 0000000..b226c33
+--- /dev/null
++++ b/.changeset/bright-rivers-track.md
+@@ -0,0 +1,5 @@
++---
++'pliny': minor
++---
++
++Add an optional cookieless Zenovay analytics provider with deduplicated client-side navigation tracking.
+diff --git a/packages/pliny/CHANGELOG.md b/packages/pliny/CHANGELOG.md
+index e022ea4..36b221d 100644
+--- a/packages/pliny/CHANGELOG.md
++++ b/packages/pliny/CHANGELOG.md
+@@ -1,5 +1,10 @@
+ # pliny
+ 
++## Unreleased
++
++- Add an optional cookieless Zenovay analytics provider with deduplicated
++  client-side navigation tracking.
++
+ ## 0.4.1
+ 
+ ### Patch Changes
+diff --git a/packages/pliny/src/analytics/Zenovay.tsx b/packages/pliny/src/analytics/Zenovay.tsx
+new file mode 100644
+index 0000000..dc1aa55
+--- /dev/null
++++ b/packages/pliny/src/analytics/Zenovay.tsx
+@@ -0,0 +1,48 @@
++'use client'
++
++import { usePathname, useSearchParams } from 'next/navigation'
++import Script from 'next/script.js'
++import { useEffect, useRef } from 'react'
++
++export interface ZenovayProps {
++  trackingCode: string
++  cookieless?: boolean
++  src?: string
++}
++
++export const Zenovay = ({
++  trackingCode,
++  cookieless = true,
++  src = 'https://api.zenovay.com/z.js',
++}: ZenovayProps) => {
++  const pathname = usePathname()
++  const searchParams = useSearchParams()
++  const previousUrl = useRef<string>()
++
++  useEffect(() => {
++    const query = searchParams.toString()
++    const currentUrl = `${pathname}${query ? `?${query}` : ''}`
++
++    if (!previousUrl.current) {
++      previousUrl.current = currentUrl
++      return
++    }
++
++    if (previousUrl.current === currentUrl) {
++      return
++    }
++
++    previousUrl.current = currentUrl
++    window.zenovay?.('page')
++  }, [pathname, searchParams])
++
++  return (
++    <Script
++      id="zenovay-script"
++      strategy="afterInteractive"
++      data-id={trackingCode}
++      data-cookieless={cookieless ? 'true' : undefined}
++      src={src}
++    />
++  )
++}
+diff --git a/packages/pliny/src/analytics/index.tsx b/packages/pliny/src/analytics/index.tsx
+index a0718e1..59ee843 100644
+--- a/packages/pliny/src/analytics/index.tsx
++++ b/packages/pliny/src/analytics/index.tsx
+@@ -1,16 +1,19 @@
+ /* eslint-disable @typescript-eslint/no-explicit-any */
++import { Suspense } from 'react'
+ import { GA, GoogleAnalyticsProps } from './GoogleAnalytics'
+ import { Plausible, PlausibleProps } from './Plausible'
+ import { SimpleAnalytics, SimpleAnalyticsProps } from './SimpleAnalytics.js'
+ import { Umami, UmamiProps } from './Umami'
+ import { Posthog, PosthogProps } from './Posthog'
+ import { Clarity, ClarityProps } from './MicrosoftClarity'
++import { Zenovay, ZenovayProps } from './Zenovay'
+ 
+ declare global {
+   interface Window {
+     gtag?: (...args: any[]) => void
+     plausible?: (...args: any[]) => void
+     sa_event?: (...args: any[]) => void
++    zenovay?: (command: string, ...args: unknown[]) => void
+   }
+ }
+ 
+@@ -21,6 +24,7 @@ export interface AnalyticsConfig {
+   posthogAnalytics?: PosthogProps
+   simpleAnalytics?: SimpleAnalyticsProps
+   clarityAnalytics?: ClarityProps
++  zenovayAnalytics?: ZenovayProps
+ }
+ 
+ /**
+@@ -71,10 +75,23 @@ export const Analytics = ({ analyticsConfig }: AnalyticsProps) => {
+       {isProduction && analyticsConfig.clarityAnalytics && (
+         <Clarity {...analyticsConfig.clarityAnalytics} />
+       )}
++      {isProduction && analyticsConfig.zenovayAnalytics && (
++        <Suspense fallback={null}>
++          <Zenovay {...analyticsConfig.zenovayAnalytics} />
++        </Suspense>
++      )}
+     </>
+   )
+ }
+ 
+-export { GA, Plausible, SimpleAnalytics, Umami, Posthog, Clarity }
++export { GA, Plausible, SimpleAnalytics, Umami, Posthog, Clarity, Zenovay }
+ 
+-export type { GoogleAnalyticsProps, PlausibleProps, UmamiProps, PosthogProps, SimpleAnalyticsProps, ClarityProps }
++export type {
++  GoogleAnalyticsProps,
++  PlausibleProps,
++  UmamiProps,
++  PosthogProps,
++  SimpleAnalyticsProps,
++  ClarityProps,
++  ZenovayProps,
++}
+diff --git a/packages/pliny/src/config.ts b/packages/pliny/src/config.ts
+index aa26e21..c7a9959 100644
+--- a/packages/pliny/src/config.ts
++++ b/packages/pliny/src/config.ts
+@@ -72,6 +72,10 @@ const sampleConfig: PlinyConfig = {
+     clarityAnalytics: {
+       ClarityWebsiteId: '', // e.g. abcdefjhij
+     },
++    zenovayAnalytics: {
++      trackingCode: '', // e.g. ZV_YOUR_CODE
++      cookieless: true,
++    },
+   },
+   newsletter: {
+     // supports mailchimp, buttondown, convertkit, klaviyo, emailOctopus
+-- 
+2.50.1 (Apple Git-155)
+

@@ -87,11 +87,11 @@ and tested.
 | MakerKit                      | `guide-only`      | [Guide](boilerplates/makerkit/)                                                 |
 | supastarter                   | `guide-only`      | [Guide](boilerplates/supastarter/)                                              |
 | TurboStarter                  | `guide-only`      | [Guide](boilerplates/turbostarter/)                                             |
-| next-forge                    | `community`       | [Integration and upstream proposal](boilerplates/next-forge/)                   |
-| Pliny                         | `community`       | [Integration and upstream proposal](boilerplates/pliny/)                        |
+| next-forge                    | `verified`        | [Tested upstream patch](boilerplates/next-forge/)                               |
+| Pliny                         | `verified`        | [Tested upstream patch](boilerplates/pliny/)                                    |
 | Tailwind Next.js Starter Blog | `community`       | [Integration and upstream proposal](boilerplates/tailwind-nextjs-starter-blog/) |
 | Open SaaS                     | `community`       | [Integration and upstream proposal](boilerplates/open-saas/)                    |
-| Next.js SaaS Starter          | `community`       | [Integration and upstream proposal](boilerplates/nextjs-saas-starter/)          |
+| Next.js SaaS Starter          | `verified`        | [Tested upstream patch](boilerplates/nextjs-saas-starter/)                      |
 | ixartz SaaS Boilerplate       | `community`       | [Integration and upstream proposal](boilerplates/ixartz-saas-boilerplate/)      |
 | CMSaasStarter                 | `verified`        | [Tested upstream patch](boilerplates/cmsaasstarter/)                            |
 | Paddle Next.js Starter Kit    | `verified`        | [Tested upstream patch](boilerplates/paddle-nextjs-starter-kit/)                |

@@ -1,0 +1,192 @@
+From 578e303f3c0ce69f015a576a3ef7ff5f3e329ad6 Mon Sep 17 00:00:00 2001
+From: Zenovay <noreply@zenovay.com>
+Date: Sat, 18 Jul 2026 23:11:50 +0200
+Subject: [PATCH] feat(analytics): add optional Zenovay provider
+
+---
+ bun.lock                                     |  4 +++
+ docs/content/docs/packages/analytics/web.mdx | 23 ++++++++++++++-
+ packages/analytics/instrumentation-client.ts | 11 ++++++-
+ packages/analytics/keys.ts                   |  6 ++++
+ packages/analytics/package.json              |  2 ++
+ packages/analytics/provider.tsx              |  6 +++-
+ packages/analytics/zenovay-pageviews.tsx     | 30 ++++++++++++++++++++
+ 7 files changed, 79 insertions(+), 3 deletions(-)
+ create mode 100644 packages/analytics/zenovay-pageviews.tsx
+
+diff --git a/bun.lock b/bun.lock
+index 1f571f5..9bf74bd 100644
+--- a/bun.lock
++++ b/bun.lock
+@@ -229,6 +229,8 @@
+         "@next/third-parties": "16.1.6",
+         "@t3-oss/env-nextjs": "^0.13.10",
+         "@vercel/analytics": "^1.6.1",
++        "@zenovay/tracker": "0.1.0",
++        "next": "16.1.6",
+         "posthog-js": "^1.359.1",
+         "posthog-node": "^5.28.0",
+         "react": "19.2.4",
+@@ -2041,6 +2043,8 @@
+ 
+     "@xtuc/long": ["@xtuc/long@4.2.2", "", {}, "sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ=="],
+ 
++    "@zenovay/tracker": ["@zenovay/tracker@0.1.0", "", {}, "sha512-7pO8Gpz14uNZzC0R+V4qy6msCE0uxGxym0NxX+yV4OKC6sezGbDNgMZXeEm2Le2ASxgB1DGrdY8m2sJ5/nL04Q=="],
++
+     "abort-controller": ["abort-controller@3.0.0", "", { "dependencies": { "event-target-shim": "^5.0.0" } }, "sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg=="],
+ 
+     "accepts": ["accepts@1.3.8", "", { "dependencies": { "mime-types": "~2.1.34", "negotiator": "0.6.3" } }, "sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw=="],
+diff --git a/docs/content/docs/packages/analytics/web.mdx b/docs/content/docs/packages/analytics/web.mdx
+index dbec277..375a466 100644
+--- a/docs/content/docs/packages/analytics/web.mdx
++++ b/docs/content/docs/packages/analytics/web.mdx
+@@ -8,7 +8,28 @@ related:
+   - /docs/packages/analytics/product
+ ---
+ 
+-next-forge comes with three web analytics libraries.
++next-forge comes with four web analytics libraries.
++
++## Zenovay
++
++Zenovay connects traffic and acquisition channels to signups and revenue. Set
++`NEXT_PUBLIC_ZENOVAY_TRACKING_CODE` to enable the optional cookieless provider.
++The initial page view is automatic, and the provider records each unique App
++Router navigation once.
++
++Use the public tracker helpers for application events:
++
++```ts
++import { goal, identify, revenue, track } from '@zenovay/tracker';
++
++track('checkout_started', { plan: 'pro' });
++goal('signup_completed');
++identify(user.id, { email: user.email });
++revenue(49, 'USD', { order_id: checkoutSession.id });
++```
++
++Connect Stripe in Zenovay for authoritative server-side revenue attribution.
++Local event ingestion is controlled by the website's Allow Localhost setting.
+ 
+ ## Vercel Web Analytics
+ 
+diff --git a/packages/analytics/instrumentation-client.ts b/packages/analytics/instrumentation-client.ts
+index 016a168..4185d63 100644
+--- a/packages/analytics/instrumentation-client.ts
++++ b/packages/analytics/instrumentation-client.ts
+@@ -1,8 +1,17 @@
++import { init } from "@zenovay/tracker";
+ import posthog from "posthog-js";
+ import { keys } from "./keys";
+ 
+ export const initializeAnalytics = () => {
+-  const { NEXT_PUBLIC_POSTHOG_KEY, NEXT_PUBLIC_POSTHOG_HOST } = keys();
++  const {
++    NEXT_PUBLIC_POSTHOG_KEY,
++    NEXT_PUBLIC_POSTHOG_HOST,
++    NEXT_PUBLIC_ZENOVAY_TRACKING_CODE,
++  } = keys();
++
++  if (NEXT_PUBLIC_ZENOVAY_TRACKING_CODE) {
++    init(NEXT_PUBLIC_ZENOVAY_TRACKING_CODE, { cookieless: true });
++  }
+ 
+   if (!(NEXT_PUBLIC_POSTHOG_KEY && NEXT_PUBLIC_POSTHOG_HOST)) {
+     return;
+diff --git a/packages/analytics/keys.ts b/packages/analytics/keys.ts
+index 0fbe5c0..5dd3f91 100644
+--- a/packages/analytics/keys.ts
++++ b/packages/analytics/keys.ts
+@@ -8,10 +8,16 @@ export const keys = () =>
+       NEXT_PUBLIC_POSTHOG_KEY: z.string().startsWith("phc_").optional(),
+       NEXT_PUBLIC_POSTHOG_HOST: z.url().optional(),
+       NEXT_PUBLIC_GA_MEASUREMENT_ID: z.string().startsWith("G-").optional(),
++      NEXT_PUBLIC_ZENOVAY_TRACKING_CODE: z
++        .string()
++        .startsWith("ZV_")
++        .optional(),
+     },
+     runtimeEnv: {
+       NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+       NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+       NEXT_PUBLIC_GA_MEASUREMENT_ID: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID,
++      NEXT_PUBLIC_ZENOVAY_TRACKING_CODE:
++        process.env.NEXT_PUBLIC_ZENOVAY_TRACKING_CODE,
+     },
+   });
+diff --git a/packages/analytics/package.json b/packages/analytics/package.json
+index 42fa803..2f9c278 100644
+--- a/packages/analytics/package.json
++++ b/packages/analytics/package.json
+@@ -10,6 +10,8 @@
+     "@next/third-parties": "16.1.6",
+     "@t3-oss/env-nextjs": "^0.13.10",
+     "@vercel/analytics": "^1.6.1",
++    "@zenovay/tracker": "0.1.0",
++    "next": "16.1.6",
+     "posthog-js": "^1.359.1",
+     "posthog-node": "^5.28.0",
+     "react": "19.2.4",
+diff --git a/packages/analytics/provider.tsx b/packages/analytics/provider.tsx
+index fa8af19..ea6ca79 100644
+--- a/packages/analytics/provider.tsx
++++ b/packages/analytics/provider.tsx
+@@ -1,7 +1,8 @@
+ import { GoogleAnalytics } from "@next/third-parties/google";
+ import { Analytics as VercelAnalytics } from "@vercel/analytics/react";
+-import type { ReactNode } from "react";
++import { type ReactNode, Suspense } from "react";
+ import { keys } from "./keys";
++import { ZenovayPageviews } from "./zenovay-pageviews";
+ 
+ interface AnalyticsProviderProps {
+   readonly children: ReactNode;
+@@ -13,6 +14,9 @@ export const AnalyticsProvider = ({ children }: AnalyticsProviderProps) => (
+   <>
+     {children}
+     <VercelAnalytics />
++    <Suspense fallback={null}>
++      <ZenovayPageviews />
++    </Suspense>
+     {NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+       <GoogleAnalytics gaId={NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+     )}
+diff --git a/packages/analytics/zenovay-pageviews.tsx b/packages/analytics/zenovay-pageviews.tsx
+new file mode 100644
+index 0000000..55e10e9
+--- /dev/null
++++ b/packages/analytics/zenovay-pageviews.tsx
+@@ -0,0 +1,30 @@
++"use client";
++
++import { page } from "@zenovay/tracker";
++import { usePathname, useSearchParams } from "next/navigation";
++import { useEffect, useRef } from "react";
++
++export const ZenovayPageviews = () => {
++  const pathname = usePathname();
++  const searchParams = useSearchParams();
++  const previousUrl = useRef<string | undefined>(undefined);
++
++  useEffect(() => {
++    const query = searchParams.toString();
++    const currentUrl = `${pathname}${query ? `?${query}` : ""}`;
++
++    if (!previousUrl.current) {
++      previousUrl.current = currentUrl;
++      return;
++    }
++
++    if (previousUrl.current === currentUrl) {
++      return;
++    }
++
++    previousUrl.current = currentUrl;
++    page();
++  }, [pathname, searchParams]);
++
++  return null;
++};
+-- 
+2.50.1 (Apple Git-155)
+

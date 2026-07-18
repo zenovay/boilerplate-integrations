@@ -2,15 +2,24 @@
 
 ## Status
 
-- Status: `community`
+- Status: `verified`
 - Upstream commit: `f6302e3e0723888accb2d8a02068d6bc5c1377b9`
+- Prepared branch: `zenovay/analytics-provider`
+- Prepared commit: `414514e50e0ca4ffa74c45c06638768a70c9d671`
 - Last verified: 2026-07-18
 - Maintainer: Zenovay
 - Upstream: https://github.com/timlrx/pliny/tree/main/packages/pliny/src/analytics
 
 ## Install
 
-Add a `Zenovay.tsx` provider beside the existing analytics components:
+Apply the patch from the upstream repository root:
+
+```bash
+git apply 0001-feat-analytics-add-Zenovay-provider.patch
+```
+
+The patch is in [`patches/`](patches/). It adds a `Zenovay.tsx` provider
+beside the existing analytics components:
 
 ```tsx
 import Script from 'next/script.js'
@@ -70,8 +79,16 @@ testing events locally. Add Zenovay to the consumer's CSP.
 
 ## Verification
 
-Run Pliny's package build and typecheck, then consume the built package from the
-Tailwind Starter Blog. Confirm the generated page contains one script.
+The patch was built against the recorded upstream commit:
+
+```bash
+corepack yarn install --immutable
+corepack yarn workspace pliny build
+```
+
+Both commands pass. For an application-level check, consume the built package
+from the Tailwind Starter Blog and confirm the generated page contains one
+script and one event per unique client navigation.
 
 ## Troubleshooting
 
