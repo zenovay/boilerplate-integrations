@@ -3,4 +3,5 @@ pnpm-lock.yaml
 **/.next
 **/.nuxt
 **/.svelte-kit
+examples/nextjs-saas/next-env.d.ts
 catalog/boilerplates.json
