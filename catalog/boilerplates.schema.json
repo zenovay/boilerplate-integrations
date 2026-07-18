@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/zenovay/boilerplate-integrations/main/catalog/boilerplates.schema.json",
+  "title": "Zenovay boilerplate research catalog",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "name",
+      "slug",
+      "website",
+      "repository",
+      "documentation",
+      "frameworks",
+      "language",
+      "license",
+      "commercial",
+      "openSource",
+      "active",
+      "analyticsProviders",
+      "analyticsArchitecture",
+      "integrationMethod",
+      "paymentProviders",
+      "targetAudience",
+      "popularitySignals",
+      "lastChecked",
+      "integrationStatus",
+      "integrationPath",
+      "priorityScore",
+      "priorityReason",
+      "evidence"
+    ],
+    "properties": {
+      "name": { "type": "string", "minLength": 1 },
+      "slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "website": { "type": "string", "format": "uri" },
+      "repository": { "type": "string", "format": "uri" },
+      "documentation": { "type": "string", "format": "uri" },
+      "frameworks": {
+        "type": "array",
+        "items": { "type": "string" },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "language": { "type": "string" },
+      "license": { "type": "string" },
+      "commercial": { "type": "boolean" },
+      "openSource": { "type": "boolean" },
+      "active": { "type": "boolean" },
+      "analyticsProviders": {
+        "type": "array",
+        "items": { "type": "string" },
+        "uniqueItems": true
+      },
+      "analyticsArchitecture": { "type": "string" },
+      "integrationMethod": { "type": "string" },
+      "paymentProviders": {
+        "type": "array",
+        "items": { "type": "string" },
+        "uniqueItems": true
+      },
+      "targetAudience": {
+        "type": "array",
+        "items": { "type": "string" },
+        "minItems": 1,
+        "uniqueItems": true
+      },
+      "popularitySignals": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["checkedAt", "source"],
+        "properties": {
+          "githubStars": { "type": "integer", "minimum": 0 },
+          "checkedAt": { "type": "string", "format": "date" },
+          "source": { "type": "string", "format": "uri" },
+          "note": { "type": "string" }
+        }
+      },
+      "lastChecked": { "type": "string", "format": "date" },
+      "integrationStatus": {
+        "enum": [
+          "verified",
+          "community",
+          "guide-only",
+          "planned",
+          "blocked-private",
+          "deprecated"
+        ]
+      },
+      "integrationPath": { "type": "string" },
+      "priorityScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+      "priorityReason": { "type": "string", "minLength": 1 },
+      "evidence": {
+        "type": "array",
+        "items": { "type": "string", "format": "uri" },
+        "minItems": 1,
+        "uniqueItems": true
+      }
+    }
+  }
+}
