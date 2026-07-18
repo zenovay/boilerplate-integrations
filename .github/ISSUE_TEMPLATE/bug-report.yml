@@ -1,0 +1,26 @@
+name: Bug report
+description: Report a reproducible problem with an integration or example.
+title: '[Bug]: '
+labels: [bug]
+body:
+  - type: input
+    id: path
+    attributes:
+      label: Integration path
+      placeholder: frameworks/nextjs-app-router
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Include versions, commands, expected behavior, and actual behavior.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety
+      options:
+        - label: I removed secrets, personal data, and real production tracking codes.
+          required: true

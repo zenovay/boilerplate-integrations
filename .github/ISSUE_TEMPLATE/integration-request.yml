@@ -1,0 +1,31 @@
+name: Integration request
+description: Request support for a framework, starter kit, or boilerplate.
+title: '[Integration]: '
+labels: [integration-request]
+body:
+  - type: input
+    id: project
+    attributes:
+      label: Project
+      description: Public project or product name.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Public source or documentation
+      description: Link to the repository or official integration documentation.
+    validations:
+      required: true
+  - type: textarea
+    id: architecture
+    attributes:
+      label: Analytics architecture
+      description: Existing providers, framework, navigation behavior, and billing integration if known.
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checks
+      options:
+        - label: This request contains no secrets, private source, or personal information.
+          required: true
