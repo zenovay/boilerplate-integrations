@@ -1,17 +1,17 @@
-From 384f25a701a9aeac1b5817a85512c7a423afce23 Mon Sep 17 00:00:00 2001
+From 61944e5e95f9540fa6acd188b310e81351488f15 Mon Sep 17 00:00:00 2001
 From: Zenovay <noreply@zenovay.com>
 Date: Sat, 18 Jul 2026 22:38:45 +0200
 Subject: [PATCH] feat: add optional Zenovay revenue analytics
 
 ---
  .env.local.example                            |  3 ++
- README.md                                     |  1 +
+ README.md                                     |  6 ++++
  package.json                                  |  1 +
  pnpm-lock.yaml                                | 13 +++++--
  src/app/layout.tsx                            |  2 ++
  src/components/analytics/zenovay-provider.tsx | 36 +++++++++++++++++++
- src/components/checkout/checkout-contents.tsx | 30 +++++++++++++---
- 7 files changed, 80 insertions(+), 6 deletions(-)
+ src/components/checkout/checkout-contents.tsx | 19 +++++++---
+ 7 files changed, 74 insertions(+), 6 deletions(-)
  create mode 100644 src/components/analytics/zenovay-provider.tsx
 
 diff --git a/.env.local.example b/.env.local.example
@@ -26,17 +26,23 @@ index 8563d7f..6b5e1f6 100644
 +# Optional cookieless Zenovay analytics
 +NEXT_PUBLIC_ZENOVAY_TRACKING_CODE=
 diff --git a/README.md b/README.md
-index 84bca05..c22ae6e 100644
+index 84bca05..5e853b3 100644
 --- a/README.md
 +++ b/README.md
-@@ -69,6 +69,7 @@ Then, enter Paddle environment variables:
+@@ -69,7 +69,13 @@ Then, enter Paddle environment variables:
  | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`    | A [client-side key](https://developer.paddle.com/api-reference/about/authentication?utm_source=dx&utm_medium=paddle-nextjs-starter-kit), used for interacting with Paddle in the frontend. For example, getting localized prices for pricing pages and opening a checkout. | Go to [**Paddle > Developer tools > Authentication**](https://sandbox-vendors.paddle.com/authentication-v2) and create a new client-side token.                                                                                                              |
  | `PADDLE_NOTIFICATION_WEBHOOK_SECRET` | A secret key used for verifying that [webhooks](https://developer.paddle.com/webhooks/notification-destinations?utm_source=dx&utm_medium=paddle-nextjs-starter-kit) came from Paddle and haven't been tampered with in transit. Important for security.                    | Go to [**Paddle > Developer tools > Notifications**](https://sandbox-vendors.paddle.com/notifications), create a new notification destination for your Vercel deploy URL + `/api/webhook`, then edit to copy the secret key. See below for more information. |
  | `NEXT_PUBLIC_PADDLE_ENV`             | Environment for our Paddle account. This should match the kind of Paddle account you signed up for.                                                                                                                                                                        | Enter `sandbox` for sandbox accounts or `production` for live accounts.                                                                                                                                                                                      |
-+| `NEXT_PUBLIC_ZENOVAY_TRACKING_CODE`  | Optional public tracking code for cookieless Zenovay analytics, including checkout revenue attribution.                                                                                                                                                                    | Create a website in Zenovay and copy its `ZV_...` tracking code.                                                                                                                                                                                             |
++| `NEXT_PUBLIC_ZENOVAY_TRACKING_CODE`  | Optional public tracking code for cookieless Zenovay analytics and Paddle customer identification.                                                                                                                                                                         | Create a website in Zenovay and copy its `ZV_...` tracking code.                                                                                                                                                                                             |
  
  Use `https://<PROJECTNAME>.vercel.app/api/webhook` as the endpoint URL for your notification destination, where `<PROJECTNAME>` is the name of your project in Vercel. For example, `https://paddle-billing.vercel.app/api/webhook`.
  
++To attribute completed Paddle transactions in Zenovay, connect Paddle under your
++website's **Revenue > Integrations** settings. Zenovay receives signed Paddle
++webhooks as the revenue source of truth, while the checkout callback identifies
++the customer so the payment can be joined to their visit.
++
+ If your project name isn't unique, your Vercel deploy URL may not match the URL you enter here. We can review and update this after deploy.
 diff --git a/package.json b/package.json
 index f83b3df..8e7d352 100644
 --- a/package.json
@@ -164,55 +170,44 @@ index 0000000..c8a0220
 +  return null;
 +}
 diff --git a/src/components/checkout/checkout-contents.tsx b/src/components/checkout/checkout-contents.tsx
-index a4cc1a7..becc16f 100644
+index a4cc1a7..c776498 100644
 --- a/src/components/checkout/checkout-contents.tsx
 +++ b/src/components/checkout/checkout-contents.tsx
-@@ -4,9 +4,11 @@ import { PriceSection } from '@/components/checkout/price-section';
+@@ -4,9 +4,10 @@ import { PriceSection } from '@/components/checkout/price-section';
  import { CheckoutFormGradients } from '@/components/gradients/checkout-form-gradients';
  import { type Environments, initializePaddle, type Paddle } from '@paddle/paddle-js';
  import type { CheckoutEventsData } from '@paddle/paddle-js/types/checkout/events';
-+import { identify, revenue } from '@zenovay/tracker';
++import { identify } from '@zenovay/tracker';
  import throttle from 'lodash.throttle';
  import { useParams } from 'next/navigation';
 -import { useCallback, useEffect, useState } from 'react';
 +import { useCallback, useEffect, useRef, useState } from 'react';
-+import { convertAmountFromLowestUnit } from '@/utils/paddle/parse-money';
  
  interface PathParams {
    priceId: string;
-@@ -22,9 +24,29 @@ export function CheckoutContents({ userEmail }: Props) {
+@@ -22,9 +23,19 @@ export function CheckoutContents({ userEmail }: Props) {
    const [quantity, setQuantity] = useState<number>(1);
    const [paddle, setPaddle] = useState<Paddle | null>(null);
    const [checkoutData, setCheckoutData] = useState<CheckoutEventsData | null>(null);
-+  const recordedTransactions = useRef(new Set<string>());
++  const identifiedTransactions = useRef(new Set<string>());
  
 -  const handleCheckoutEvents = (event: CheckoutEventsData) => {
 -    setCheckoutData(event);
 +  const handleCheckoutEvents = (eventName: string, eventData: CheckoutEventsData) => {
 +    setCheckoutData(eventData);
 +
-+    if (eventName !== 'checkout.completed' || recordedTransactions.current.has(eventData.transaction_id)) return;
++    if (eventName !== 'checkout.completed' || identifiedTransactions.current.has(eventData.transaction_id)) return;
 +
-+    recordedTransactions.current.add(eventData.transaction_id);
++    identifiedTransactions.current.add(eventData.transaction_id);
 +
 +    const visitorId = eventData.customer.id ?? eventData.customer.email;
 +    if (visitorId) {
 +      identify(visitorId, { email: eventData.customer.email });
 +    }
-+
-+    revenue(
-+      convertAmountFromLowestUnit(String(eventData.totals.total), eventData.currency_code),
-+      eventData.currency_code,
-+      {
-+        order_id: eventData.transaction_id,
-+        product_id: eventData.items[0]?.product.id,
-+        paddle_checkout_id: eventData.id,
-+      },
-+    );
    };
  
    const updateItems = useCallback(
-@@ -41,7 +63,7 @@ export function CheckoutContents({ userEmail }: Props) {
+@@ -41,7 +52,7 @@ export function CheckoutContents({ userEmail }: Props) {
          environment: process.env.NEXT_PUBLIC_PADDLE_ENV as Environments,
          eventCallback: (event) => {
            if (event.data && event.name) {

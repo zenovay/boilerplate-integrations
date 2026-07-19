@@ -5,7 +5,7 @@
 - Status: `verified`
 - Upstream commit: `a8c5168e5411af7a4a4c8521d0a8a342ce0307ac`
 - Prepared branch: `zenovay/paddle-revenue-analytics`
-- Last verified: 2026-07-18
+- Last verified: 2026-07-19
 - Maintainer: Zenovay
 - Upstream: https://github.com/PaddleHQ/paddle-nextjs-starter-kit
 
@@ -27,9 +27,10 @@ App Router navigation. Nothing is loaded when the value is absent.
 ## Events
 
 Paddle's `checkout.completed` callback identifies the Paddle customer and
-records the transaction once. The amount is converted from Paddle's lowest
-currency unit with the starter's existing currency helper. The Paddle
-transaction ID is used as the order ID.
+deduplicates that identification by transaction ID. Connect Paddle under the
+website's **Revenue > Integrations** settings so Zenovay can create a signed
+webhook destination. Paddle's `transaction.completed` webhook is the revenue
+source of truth; the browser callback does not record a second purchase.
 
 ## Privacy and first-party tracking
 
@@ -57,14 +58,19 @@ pnpm build
 The existing `react-hooks/exhaustive-deps` warning in Paddle's throttled
 checkout update callback remains unchanged. The build and tests pass.
 
+An isolated Paddle sandbox checkout was also completed after connecting the
+Zenovay webhook integration. It appeared once in Zenovay as a $5 transaction
+with $5 MRR and a $5 average order value.
+
 ## Troubleshooting
 
 - No pageviews: confirm the public tracking code is present in the built app.
 - No local events: enable local ingestion for the isolated Zenovay site.
-- No revenue: verify Paddle emitted `checkout.completed` and that the checkout
-  uses the patched client component.
-- Duplicate revenue: keep the transaction guard from the patch and avoid a
-  second browser-side purchase handler.
+- No revenue: confirm the Paddle integration is connected in Zenovay, its
+  sandbox/live mode matches the Paddle account, and Paddle delivered a signed
+  `transaction.completed` webhook.
+- Missing attribution: confirm the checkout uses the patched client component
+  so its customer ID and email are identified before the success redirect.
 
 ## Removal
 
