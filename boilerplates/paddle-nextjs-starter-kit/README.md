@@ -26,16 +26,26 @@ App Router navigation. Nothing is loaded when the value is absent.
 
 ## Events
 
-The checkout identifies the Paddle customer as soon as Paddle knows them —
-`checkout.customer.created` fires when the email is entered, with
-`checkout.customer.updated` and `checkout.completed` as follow-ups — by both
-email and Paddle customer ID. Identification deduplicates per transaction and
-identity, so a later, richer identity (email-only → Paddle customer ID) is
-still sent. The identify request is kept alive across Paddle's immediate
-success-page redirect. Connect Paddle under the website's **Revenue >
-Integrations** settings so Zenovay can create a signed webhook destination.
-Paddle's `transaction.completed` webhook is the revenue source of truth; the
-browser callback does not record a second purchase.
+Attribution works on two layers, with Paddle's signed `transaction.completed`
+webhook as the sole revenue source of truth:
+
+1. The checkout attaches the Zenovay visitor id to the transaction as
+   `customData.zenovay_attribution_id` (at `Checkout.open`, or via
+   `Checkout.updateCheckout` once the tracker finishes loading). The webhook
+   reads it back and links the purchase directly to that visitor's journey,
+   so revenue attributes even in the rare scenarios where no frontend
+   checkout event fires.
+2. The checkout also identifies the Paddle customer as soon as Paddle knows
+   them — `checkout.customer.created` fires when the email is entered, with
+   `checkout.customer.updated` and `checkout.completed` as follow-ups — by
+   both email and Paddle customer ID. Identification deduplicates per
+   transaction and identity, so a later, richer identity (email-only →
+   Paddle customer ID) is still sent, and the identify request is kept alive
+   across Paddle's immediate success-page redirect. Browser events are
+   identification only; they never record revenue.
+
+Connect Paddle under the website's **Revenue > Integrations** settings so
+Zenovay can create a signed webhook destination.
 
 ## Privacy and first-party tracking
 

@@ -1,17 +1,17 @@
-From b8b23a8b8657841aa2bb497bf19997b677d4e6b5 Mon Sep 17 00:00:00 2001
+From 738336670d28d1c9cd15ae9d0937ce351084fab9 Mon Sep 17 00:00:00 2001
 From: Zenovay <noreply@zenovay.com>
 Date: Sat, 18 Jul 2026 22:38:45 +0200
 Subject: [PATCH] feat: add optional Zenovay revenue analytics
 
 ---
- .env.local.example                            |  3 ++
- README.md                                     | 12 ++++++
+ .env.local.example                            |  3 +
+ README.md                                     | 20 ++++++
  package.json                                  |  1 +
- pnpm-lock.yaml                                | 13 +++++-
+ pnpm-lock.yaml                                | 13 +++-
  src/app/layout.tsx                            |  2 +
- src/components/analytics/zenovay-provider.tsx | 42 +++++++++++++++++++
- src/components/checkout/checkout-contents.tsx | 34 +++++++++++++--
- 7 files changed, 101 insertions(+), 6 deletions(-)
+ src/components/analytics/zenovay-provider.tsx | 42 +++++++++++
+ src/components/checkout/checkout-contents.tsx | 72 +++++++++++++++++--
+ 7 files changed, 147 insertions(+), 6 deletions(-)
  create mode 100644 src/components/analytics/zenovay-provider.tsx
 
 diff --git a/.env.local.example b/.env.local.example
@@ -26,10 +26,10 @@ index 8563d7f..6b5e1f6 100644
 +# Optional cookieless Zenovay analytics
 +NEXT_PUBLIC_ZENOVAY_TRACKING_CODE=
 diff --git a/README.md b/README.md
-index 84bca05..b41797b 100644
+index 84bca05..eae3115 100644
 --- a/README.md
 +++ b/README.md
-@@ -69,9 +69,21 @@ Then, enter Paddle environment variables:
+@@ -69,9 +69,29 @@ Then, enter Paddle environment variables:
  | `NEXT_PUBLIC_PADDLE_CLIENT_TOKEN`    | A [client-side key](https://developer.paddle.com/api-reference/about/authentication?utm_source=dx&utm_medium=paddle-nextjs-starter-kit), used for interacting with Paddle in the frontend. For example, getting localized prices for pricing pages and opening a checkout. | Go to [**Paddle > Developer tools > Authentication**](https://sandbox-vendors.paddle.com/authentication-v2) and create a new client-side token.                                                                                                              |
  | `PADDLE_NOTIFICATION_WEBHOOK_SECRET` | A secret key used for verifying that [webhooks](https://developer.paddle.com/webhooks/notification-destinations?utm_source=dx&utm_medium=paddle-nextjs-starter-kit) came from Paddle and haven't been tampered with in transit. Important for security.                    | Go to [**Paddle > Developer tools > Notifications**](https://sandbox-vendors.paddle.com/notifications), create a new notification destination for your Vercel deploy URL + `/api/webhook`, then edit to copy the secret key. See below for more information. |
  | `NEXT_PUBLIC_PADDLE_ENV`             | Environment for our Paddle account. This should match the kind of Paddle account you signed up for.                                                                                                                                                                        | Enter `sandbox` for sandbox accounts or `production` for live accounts.                                                                                                                                                                                      |
@@ -39,14 +39,22 @@ index 84bca05..b41797b 100644
  
 +To attribute completed Paddle transactions in Zenovay, connect Paddle under your
 +website's **Revenue > Integrations** settings. Zenovay receives signed Paddle
-+webhooks as the revenue source of truth, while the checkout identifies the
-+customer as soon as Paddle knows them (`checkout.customer.created`/`updated`,
-+with `checkout.completed` as a fallback) so the payment can be joined to their
-+visit before the success-page redirect. Tracking uses Zenovay's persistent
-+first-party visitor identifier by default, which keeps the checkout page and
-+`/checkout/success` in one journey. If you want Zenovay's cookieless mode,
-+enable it for the website in the Zenovay dashboard first — only then pass
-+`{ cookieless: true }` to `init`.
++webhooks as the revenue source of truth. Attribution works on two layers:
++
++1. The checkout attaches the Zenovay visitor id to the Paddle transaction as
++   `customData.zenovay_attribution_id`, so the signed webhook links the
++   purchase to the visitor's journey even if no browser event ever fires.
++2. The checkout also identifies the customer as soon as Paddle knows them
++   (`checkout.customer.created`/`updated`, with `checkout.completed` as a
++   fallback). Browser events are identification only — revenue is never
++   recorded from the frontend.
++
++Tracking uses Zenovay's persistent first-party visitor identifier by default,
++which keeps the checkout page and `/checkout/success` in one journey. If you
++want Zenovay's cookieless mode, enable it for the website in the Zenovay
++dashboard first — only then pass `{ cookieless: true }` to `init` (in
++cookieless mode attribution relies on the customer email instead of the
++visitor id).
 +
  If your project name isn't unique, your Vercel deploy URL may not match the URL you enter here. We can review and update this after deploy.
  
@@ -184,7 +192,7 @@ index 0000000..e43f305
 +  return null;
 +}
 diff --git a/src/components/checkout/checkout-contents.tsx b/src/components/checkout/checkout-contents.tsx
-index a4cc1a7..b8d9fe3 100644
+index a4cc1a7..ff0ae66 100644
 --- a/src/components/checkout/checkout-contents.tsx
 +++ b/src/components/checkout/checkout-contents.tsx
 @@ -4,9 +4,10 @@ import { PriceSection } from '@/components/checkout/price-section';
@@ -199,14 +207,32 @@ index a4cc1a7..b8d9fe3 100644
  
  interface PathParams {
    priceId: string;
-@@ -17,14 +18,39 @@ interface Props {
+@@ -17,14 +18,71 @@ interface Props {
    userEmail?: string;
  }
  
 +// Identify as soon as Paddle knows the customer (email entered), not only on
 +// checkout.completed — Paddle redirects to the success URL immediately after
 +// completion, so a completed-only identify can be cancelled by the redirect.
++// Browser events are IDENTIFICATION ONLY; revenue is recorded exclusively from
++// Paddle's signed transaction.completed webhook.
 +const identityEvents = new Set(['checkout.customer.created', 'checkout.customer.updated', 'checkout.completed']);
++
++// Read the Zenovay visitor id from the loaded tracker (undefined while the
++// tracker script is still loading). Passed to Paddle as
++// customData.zenovay_attribution_id so the signed webhook can attribute the
++// purchase to this visitor even if no browser event ever fires.
++function getZenovayVisitorId(): string | undefined {
++  if (typeof window === 'undefined') return undefined;
++  const zenovay = (window as { zenovay?: (...args: unknown[]) => unknown }).zenovay;
++  if (typeof zenovay !== 'function') return undefined;
++  try {
++    const id = zenovay('getVisitorId');
++    return typeof id === 'string' && id ? id : undefined;
++  } catch {
++    return undefined;
++  }
++}
 +
  export function CheckoutContents({ userEmail }: Props) {
    const { priceId } = useParams<PathParams>();
@@ -214,9 +240,25 @@ index a4cc1a7..b8d9fe3 100644
    const [paddle, setPaddle] = useState<Paddle | null>(null);
    const [checkoutData, setCheckoutData] = useState<CheckoutEventsData | null>(null);
 +  const identifiedCustomers = useRef(new Set<string>());
-+
++  const paddleRef = useRef<Paddle | null>(null);
++  const attributionApplied = useRef(false);
+ 
+-  const handleCheckoutEvents = (event: CheckoutEventsData) => {
+-    setCheckoutData(event);
 +  const handleCheckoutEvents = (eventName: string, eventData: CheckoutEventsData) => {
 +    setCheckoutData(eventData);
++
++    // The tracker may finish loading after Checkout.open — attach the
++    // attribution id to the open checkout as soon as it becomes available.
++    if (!attributionApplied.current) {
++      const attributionId = getZenovayVisitorId();
++      if (attributionId && paddleRef.current) {
++        attributionApplied.current = true;
++        paddleRef.current.Checkout.updateCheckout({
++          customData: { zenovay_attribution_id: attributionId },
++        });
++      }
++    }
 +
 +    if (!identityEvents.has(eventName)) return;
 +
@@ -230,9 +272,7 @@ index a4cc1a7..b8d9fe3 100644
 +    const identityKey = `${eventData.transaction_id}:${visitorId}`;
 +    if (identifiedCustomers.current.has(identityKey)) return;
 +    identifiedCustomers.current.add(identityKey);
- 
--  const handleCheckoutEvents = (event: CheckoutEventsData) => {
--    setCheckoutData(event);
++
 +    identify(visitorId, {
 +      email,
 +      customer_id: paddleCustomerId,
@@ -241,7 +281,7 @@ index a4cc1a7..b8d9fe3 100644
    };
  
    const updateItems = useCallback(
-@@ -41,7 +67,7 @@ export function CheckoutContents({ userEmail }: Props) {
+@@ -41,7 +99,7 @@ export function CheckoutContents({ userEmail }: Props) {
          environment: process.env.NEXT_PUBLIC_PADDLE_ENV as Environments,
          eventCallback: (event) => {
            if (event.data && event.name) {
@@ -250,3 +290,18 @@ index a4cc1a7..b8d9fe3 100644
            }
          },
          checkout: {
+@@ -59,8 +117,14 @@ export function CheckoutContents({ userEmail }: Props) {
+       }).then(async (paddle) => {
+         if (paddle && priceId) {
+           setPaddle(paddle);
++          paddleRef.current = paddle;
++          const attributionId = getZenovayVisitorId();
++          if (attributionId) {
++            attributionApplied.current = true;
++          }
+           paddle.Checkout.open({
+             ...(userEmail && { customer: { email: userEmail } }),
++            ...(attributionId && { customData: { zenovay_attribution_id: attributionId } }),
+             items: [{ priceId: priceId, quantity: 1 }],
+           });
+         }
